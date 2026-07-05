@@ -4,7 +4,6 @@ const Submission = require('../models/Submission');
 const User = require('../models/User');
 const { gradeSubmission } = require('../services/gradingService');
 const { generateShuffledSession } = require('../utils/shuffle');
-const { getIO } = require('../config/socket');
 const { createError } = require('../middleware/errorMiddleware');
 
 // ─────────────────────────────────────────────
@@ -158,6 +157,12 @@ const startExam = async (req, res, next) => {
       student: studentId,
       exam: examId,
       startTime: now,
+      proctoringLogs: [
+        {
+          event: 'Exam Started',
+          details: `Exam session initiated. Total duration: ${exam.duration} minutes.`
+        }
+      ]
     });
 
     return resumeSession(req, res, next, submission, exam);
@@ -317,6 +322,10 @@ const submitExam = async (req, res, next) => {
     }
 
     submission.status = 'Submitted';
+    submission.proctoringLogs.push({
+      event: 'Exam Submitted',
+      details: 'Exam completed and manually submitted by student.'
+    });
     await submission.save();
 
     await gradeSubmission(submission._id);
@@ -359,36 +368,19 @@ const logStrike = async (req, res, next) => {
       submission.status = 'Debarred';
       submission.forceSubmitReason = 'Anti-cheat violation: max strikes exceeded';
       debarred = true;
-      await submission.save();
     }
+
+    submission.proctoringLogs.push({
+      event: debarred ? 'Debarred' : 'Tab Switch (Strike)',
+      details: debarred
+        ? `Debarred after exceeding maximum strikes (${submission.strikeCount}/${submission.exam.maxStrikes}).`
+        : `Strike ${submission.strikeCount} of ${submission.exam.maxStrikes} logged due to tab switch/blur.`
+    });
+    await submission.save();
 
     if (debarred) {
       await gradeSubmission(submission._id);
     }
-
-    // Emit real-time updates to admin monitor and student session
-    try {
-      const io = getIO();
-      const payload = {
-        submissionId: submission._id,
-        studentId: req.user._id,
-        studentName: req.user.name,
-        examId: submission.exam._id,
-        examTitle: submission.exam.title,
-        strikeCount: submission.strikeCount,
-        maxStrikes: submission.exam.maxStrikes,
-        status: submission.status,
-      };
-
-      io.to('admin-monitor').emit(debarred ? 'student:debarred' : 'strike:update', payload);
-
-      if (debarred) {
-        io.to(`session:${submission._id}`).emit('exam:debarred', {
-          submissionId: submission._id,
-          message: 'You have been debarred for violating exam rules.',
-        });
-      }
-    } catch (_) {}
 
     res.json({
       strikeCount: submission.strikeCount,

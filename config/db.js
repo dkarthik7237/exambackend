@@ -1,16 +1,23 @@
 const mongoose = require('mongoose');
 
+let cachedConnection = null;
+
 /**
- * Establishes a connection to MongoDB.
- * Exits the process on failure.
+ * Establishes a connection to MongoDB, caching the connection.
  */
 const connectDB = async () => {
+  if (cachedConnection && mongoose.connection.readyState >= 1) {
+    return cachedConnection;
+  }
+
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
-    console.log(`✅ MongoDB connected: ${conn.connection.host}`);
+    // Set bufferTimeoutMS or connection options if needed
+    cachedConnection = await mongoose.connect(process.env.MONGODB_URI);
+    console.log(`✅ MongoDB connected: ${cachedConnection.connection.host}`);
+    return cachedConnection;
   } catch (error) {
     console.error(`❌ MongoDB connection error: ${error.message}`);
-    process.exit(1);
+    throw error;
   }
 };
 

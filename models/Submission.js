@@ -73,6 +73,22 @@ const submissionSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    // Proctoring Audit Log for anti-cheat tracking
+    proctoringLogs: [
+      {
+        timestamp: {
+          type: Date,
+          default: Date.now,
+        },
+        event: {
+          type: String,
+          required: true,
+        },
+        details: {
+          type: String,
+        },
+      },
+    ],
   },
   { timestamps: true }
 );
