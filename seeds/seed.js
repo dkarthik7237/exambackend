@@ -8,6 +8,13 @@
  *  • 2 Exams (1 per course, each with 5 MCQs)
  *  • Enrolls both students in both courses
  */
+const dns = require('node:dns');
+
+// Force c-ares to use Google DNS, bypassing the Windows parsing bug
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+
+// mongoose.connect(...) will now succeed
+
 
 require('dotenv').config();
 const mongoose = require('mongoose');

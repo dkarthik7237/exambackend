@@ -29,9 +29,22 @@ app.use(async (req, res, next) => {
 app.set('trust proxy', 1);
 app.use(helmet());
 app.use(mongoSanitize());
+// Normalize CLIENT_URL to support both trailing slash and slash-free options
+const clientUrl = process.env.CLIENT_URL || 'http://localhost:5174';
+const allowedOrigins = [
+  clientUrl.replace(/\/$/, ''),
+  clientUrl.replace(/\/$/, '') + '/'
+];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   })
 );
