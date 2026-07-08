@@ -29,11 +29,11 @@ app.use(async (req, res, next) => {
 app.set('trust proxy', 1);
 app.use(helmet());
 app.use(mongoSanitize());
-// Normalize CLIENT_URL to support both trailing slash and slash-free options
-const clientUrl = process.env.CLIENT_URL || 'http://localhost:5174';
 const allowedOrigins = [
-  clientUrl.replace(/\/$/, ''),
-  clientUrl.replace(/\/$/, '') + '/'
+  'https://examspace-v2.vercel.app',
+  'https://examspace-v2.vercel.app/',
+  'http://localhost:5174',
+  'http://localhost:5174/'
 ];
 
 app.use(
